@@ -1,23 +1,270 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>避難所登録</h2>
-<p>新しい避難所情報を登録します。</p>
+<style>
+  .shelter-admin {
+    max-width: 820px;
+    margin: 0 auto;
+  }
 
-<!-- 成功・エラーメッセージ表示 -->
-{% if success %}
-  <p>{{ message }}</p>
-{% endif %}
+  .shelter-admin h1,
+  .shelter-admin h2 {
+    color: #0d4a78;
+  }
 
-{% if error %}
-  <p>{{ message }}</p>
-{% endif %}
+  .admin-panel,
+  .existing-shelter {
+    margin: 18px 0;
+    padding: 20px;
+    border: 1px solid #dde3ea;
+    border-radius: 12px;
+    background: #fff;
+  }
 
-<form method="POST">
-  <p>
-    <label for="name">避難所名（必須）</label><br>
-    <input type="text" id="name" name="name">
-  </p>
-  <p><button type="submit">登録</button></p>
-</form>
+  .admin-panel p,
+  .existing-shelter p {
+    color: #526575;
+    line-height: 1.65;
+  }
+
+  .field-label {
+    display: block;
+    margin: 14px 0 6px;
+    color: #1d2a35;
+    font-weight: 700;
+  }
+
+  .name-field {
+    width: 100%;
+    min-height: 44px;
+    padding: 9px 12px;
+    border: 1px solid #b9c6d0;
+    border-radius: 8px;
+    font: inherit;
+  }
+
+  .disaster-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 8px;
+    margin: 10px 0 0;
+    padding: 14px;
+    border: 1px solid #d4dee6;
+    border-radius: 9px;
+  }
+
+  .disaster-options legend {
+    padding: 0 6px;
+    font-weight: 700;
+  }
+
+  .disaster-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+  }
+
+  .disaster-option input {
+    width: 19px;
+    height: 19px;
+    accent-color: #0d4a78;
+  }
+
+  .equipment-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .equipment-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+
+  .equipment-field select {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid #b9c6d0;
+    border-radius: 8px;
+    background: #fff;
+    color: #1d2a35;
+    font: inherit;
+  }
+
+  .admin-button {
+    min-height: 44px;
+    margin-top: 14px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 8px;
+    background: #0d4a78;
+    color: white;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .notice {
+    padding: 12px 14px;
+    border-radius: 8px;
+  }
+
+  .notice-success {
+    background: #eafaf3;
+    color: #17633f !important;
+  }
+
+  .notice-error {
+    background: #fff0ee;
+    color: #8b2418 !important;
+  }
+
+  .shelter-name {
+    margin: 0;
+    color: #1d2a35 !important;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  @media (max-width: 600px) {
+    .admin-panel,
+    .existing-shelter {
+      padding: 16px;
+    }
+  }
+</style>
+
+<section class="shelter-admin">
+  <h1>避難所情報の管理</h1>
+  <p>地区名・災害種別・設備の情報を登録してください。災害種別・設備の対応状況は自治体などの確認済み情報に基づき、不明な場合は「未確認」のままにしてください。</p>
+
+  {% if success %}
+    <p class="notice notice-success" role="status">{{ message }}</p>
+  {% endif %}
+  {% if error %}
+    <p class="notice notice-error" role="alert">{{ message }}</p>
+  {% endif %}
+
+  <section class="admin-panel" aria-labelledby="register-title">
+    <h2 id="register-title">避難所を新規登録</h2>
+    <form method="post">
+      <input type="hidden" name="action" value="create">
+      <label class="field-label" for="name">避難所名（必須）</label>
+      <input class="name-field" type="text" id="name" name="name" value="{{ form_name|default('') }}" required>
+      <label class="field-label" for="new-district">地区名（任意）</label>
+      <input class="name-field" type="text" id="new-district" name="district" value="{{ form_district|default('') }}" placeholder="例：中央地区">
+
+      <fieldset class="disaster-options">
+        <legend>対応が確認できた災害種別（1つ以上）</legend>
+        {% for disaster in disaster_types %}
+          <label class="disaster-option">
+            <input
+              type="checkbox"
+              name="disaster_types"
+              value="{{ disaster }}"
+              {% if form_action|default('') == 'create' and disaster in form_disasters|default([]) %}checked{% endif %}
+            >
+            <span>{{ disaster }}</span>
+          </label>
+        {% endfor %}
+      </fieldset>
+      <div class="equipment-fields">
+        {% for key, label in equipment_features %}
+          <div class="equipment-field">
+            <label for="new-{{ key }}">{{ label }}</label>
+            <select id="new-{{ key }}" name="{{ key }}">
+              <option value="unknown" {% if form_equipment is not defined or form_equipment.get(key, 'unknown') == 'unknown' %}selected{% endif %}>未確認</option>
+              <option value="yes" {% if form_equipment is defined and form_equipment.get(key) == 'yes' %}selected{% endif %}>可・対応</option>
+              <option value="no" {% if form_equipment is defined and form_equipment.get(key) == 'no' %}selected{% endif %}>不可・非対応</option>
+            </select>
+          </div>
+        {% endfor %}
+      </div>
+      <button class="admin-button" type="submit">避難所を登録</button>
+    </form>
+  </section>
+
+  <section aria-labelledby="existing-title">
+    <h2 id="existing-title">登録済み避難所の情報</h2>
+    <p>地区名と、確認できた災害種別・設備の状況を更新してください。</p>
+    {% for shelter in shelters %}
+      <article class="existing-shelter">
+        <h3 class="shelter-name">{{ shelter.get('name', '名称未登録') }}</h3>
+        <p>現在の地区：{{ shelter.get('district') or '未登録' }}</p>
+        {% if shelter.get('disaster_types') %}
+          <p>現在の登録：{{ shelter.get('disaster_types')|join('、') }}</p>
+        {% elif shelter.get('disaster_types') is not none %}
+          <p>現在の登録：対応する災害種別なし</p>
+        {% else %}
+          <p>現在の登録：未確認</p>
+        {% endif %}
+        <form method="post">
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="shelter_id" value="{{ shelter.get('id') }}">
+          <label class="field-label" for="shelter-{{ shelter.get('id') }}-district">地区名（任意）</label>
+          {% if form_action|default('') == 'update' and form_shelter_id == shelter.get('id') %}
+            {% set district_value = form_district %}
+          {% else %}
+            {% set district_value = shelter.get('district', '') %}
+          {% endif %}
+          <input
+            class="name-field"
+            type="text"
+            id="shelter-{{ shelter.get('id') }}-district"
+            name="district"
+            value="{{ district_value }}"
+            placeholder="例：中央地区"
+          >
+          <fieldset class="disaster-options">
+            <legend>対応が確認できた災害種別（1つ以上）</legend>
+            {% for disaster in disaster_types %}
+              <label class="disaster-option">
+                <input
+                  type="checkbox"
+                  name="disaster_types"
+                  value="{{ disaster }}"
+                  {% if form_action|default('') == 'update' and form_shelter_id == shelter.get('id') %}
+                    {% if disaster in form_disasters|default([]) %}checked{% endif %}
+                  {% elif disaster in shelter.get('disaster_types', []) %}checked{% endif %}
+                >
+                <span>{{ disaster }}</span>
+              </label>
+            {% endfor %}
+          </fieldset>
+          <div class="equipment-fields">
+            {% for key, label in equipment_features %}
+              {% if form_action|default('') == 'update' and form_shelter_id == shelter.get('id') %}
+                {% set equipment_value = form_equipment.get(key, 'unknown') %}
+              {% elif shelter.get(key) is sameas true %}
+                {% set equipment_value = 'yes' %}
+              {% elif shelter.get(key) is sameas false %}
+                {% set equipment_value = 'no' %}
+              {% else %}
+                {% set equipment_value = 'unknown' %}
+              {% endif %}
+              <div class="equipment-field">
+                <label for="shelter-{{ shelter.get('id') }}-{{ key }}">{{ label }}</label>
+                <select
+                  id="shelter-{{ shelter.get('id') }}-{{ key }}"
+                  name="{{ key }}"
+                >
+                  <option value="unknown" {% if equipment_value == 'unknown' %}selected{% endif %}>未確認</option>
+                  <option value="yes" {% if equipment_value == 'yes' %}selected{% endif %}>可・対応</option>
+                  <option value="no" {% if equipment_value == 'no' %}selected{% endif %}>不可・非対応</option>
+                </select>
+              </div>
+            {% endfor %}
+          </div>
+          <button class="admin-button" type="submit">対応情報を更新</button>
+        </form>
+      </article>
+    {% else %}
+      <p>登録済みの避難所はありません。</p>
+    {% endfor %}
+  </section>
+</section>
 {% endblock %}

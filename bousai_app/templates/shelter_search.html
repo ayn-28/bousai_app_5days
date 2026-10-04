@@ -1,8 +1,433 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>避難所検索</h2>
-<p>登録されている避難所を確認できます。</p>
+<style>
+  .shelter-search {
+    max-width: 760px;
+    margin: 0 auto;
+  }
 
-<p><a href="/all_shelters">全施設一覧</a></p>
+  .field-example {
+    margin: 7px 0 0;
+    color: #526575;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .search-heading {
+    margin-bottom: 22px;
+  }
+
+  .search-heading h1 {
+    margin: 0 0 8px;
+    color: #0d4a78;
+    font-size: 28px;
+  }
+
+  .search-heading p {
+    margin: 0;
+    color: #526575;
+    line-height: 1.7;
+  }
+
+  .search-panel,
+  .results-panel {
+    padding: 22px;
+    background: #fff;
+    border: 1px solid #dde3ea;
+    border-radius: 14px;
+    box-shadow: 0 3px 12px rgba(12,39,64,0.05);
+  }
+
+  .search-panel {
+    margin-bottom: 24px;
+  }
+
+  .search-panel h2,
+  .results-heading h2 {
+    margin: 0;
+    color: #1d2a35;
+    font-size: 20px;
+  }
+
+  .search-panel > p {
+    margin: 8px 0 18px;
+    color: #6d7d8b;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .search-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .search-fields label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .field-example {
+    margin: 7px 0 0;
+    color: #526575;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .search-fields input,
+  .search-fields select {
+    width: 100%;
+    min-height: 54px;
+    padding: 12px 14px;
+    border: 1px solid #b9c6d0;
+    border-radius: 8px;
+    color: #1d2a35;
+    font: inherit;
+    font-size: 16px;
+  }
+
+  .search-fields input:focus,
+  .search-fields select:focus {
+    outline: 3px solid rgba(13,115,216,0.2);
+    border-color: #0d73d8;
+  }
+
+  .hazard-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+    margin: 16px 0 0;
+    padding: 16px;
+    border: 1px solid #d4dee6;
+    border-radius: 10px;
+  }
+
+  .hazard-options legend {
+    padding: 0 6px;
+    font-weight: 700;
+  }
+
+  .hazard-option {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 50px;
+    padding: 10px 12px;
+    border: 1px solid #e0e6eb;
+    border-radius: 8px;
+    background: #f8fafb;
+    cursor: pointer;
+  }
+
+  .hazard-option input {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: #0d4a78;
+  }
+
+  .search-note,
+  .search-error {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .search-note {
+    background: #edf5fa;
+    color: #274b63;
+  }
+
+  .search-error {
+    margin: 0 0 16px;
+    background: #fff0ee;
+    color: #8b2418;
+  }
+
+  .search-actions {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .clear-link {
+    align-self: center;
+    padding: 8px;
+  }
+
+  .search-button {
+    width: 100%;
+    min-height: 60px;
+    padding: 12px 24px;
+    border: 0;
+    border-radius: 8px;
+    background: #0d4a78;
+    color: #fff;
+    font: inherit;
+    font-size: 19px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .search-button:hover {
+    background: #0b3d68;
+  }
+
+  .search-button:focus-visible,
+  .secondary-button:focus-visible,
+  .clear-link:focus-visible {
+    outline: 3px solid #f0a600;
+    outline-offset: 3px;
+  }
+
+  .secondary-button {
+    display: inline-flex;
+    min-height: 52px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    border: 1px solid #0d4a78;
+    border-radius: 8px;
+    background: #fff;
+    color: #0d4a78;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .secondary-button:hover {
+    background: #edf5fa;
+  }
+
+  .clear-link {
+    color: #0d5f9a;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 20px;
+  }
+
+  .results-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .result-count {
+    margin: 0;
+    color: #526575;
+    font-size: 14px;
+  }
+
+  .shelter-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .shelter-card {
+    padding: 16px;
+    border: 1px solid #e0e6eb;
+    border-radius: 10px;
+    background: #f8fafb;
+  }
+
+  .shelter-name {
+    margin: 0;
+    color: #173e5c;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .shelter-area {
+    margin: 6px 0 0;
+    color: #61717e;
+    font-size: 14px;
+  }
+
+  .shelter-disasters {
+    margin: 10px 0 0;
+    color: #36566d;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .empty-state {
+    margin: 0;
+    padding: 22px 16px;
+    border-radius: 10px;
+    background: #f3f6f8;
+    color: #435564;
+    line-height: 1.7;
+  }
+
+  .search-links {
+    margin: 18px 0 0;
+    font-size: 14px;
+  }
+
+  @media (max-width: 600px) {
+    .search-panel,
+    .results-panel {
+      padding: 18px;
+    }
+
+    .search-fields {
+      grid-template-columns: 1fr;
+    }
+
+    .search-actions {
+      align-items: stretch;
+    }
+
+    .page-actions .secondary-button {
+      width: 100%;
+    }
+  }
+</style>
+
+<section class="shelter-search">
+  <header class="search-heading">
+    <h1>避難所を探す</h1>
+    <p>災害種別や必要な設備を選び、ご家族に合った避難所を探せます。地区が分からない場合は指定せず、避難所名のキーワードから検索できます。</p>
+  </header>
+
+  <nav class="page-actions" aria-label="避難所ページ">
+    <a class="secondary-button" href="{{ url_for('all_shelters') }}">全施設一覧を見る</a>
+    <a class="secondary-button" href="{{ url_for('index') }}">ホームに戻る</a>
+  </nav>
+
+  <section class="search-panel" aria-labelledby="search-title">
+    <h2 id="search-title">検索条件</h2>
+    <p>選択した災害種別と設備のすべての条件に合う施設を表示します。</p>
+    {% if error %}
+      <p class="search-error" role="alert">{{ error }}</p>
+    {% endif %}
+    <form method="get" action="{{ url_for('shelter_search') }}">
+      <fieldset class="hazard-options">
+        <legend>想定する災害種別（複数選択可）</legend>
+        {% for disaster in disaster_types %}
+          <label class="hazard-option">
+            <input
+              type="checkbox"
+              name="disaster_types"
+              value="{{ disaster }}"
+              {% if disaster in selected_disasters %}checked{% endif %}
+            >
+            <span>{{ disaster }}</span>
+          </label>
+        {% endfor %}
+      </fieldset>
+      <fieldset class="hazard-options">
+        <legend>必要な設備（複数選択可）</legend>
+        {% for key, label in equipment_features %}
+          <label class="hazard-option">
+            <input
+              type="checkbox"
+              name="features"
+              value="{{ key }}"
+              {% if key in selected_features %}checked{% endif %}
+            >
+            <span>{{ label }}</span>
+          </label>
+        {% endfor %}
+      </fieldset>
+      <div class="search-fields">
+        <div>
+          <label for="shelter-name">避難所名（キーワード）</label>
+          <input
+            type="search"
+            id="shelter-name"
+            name="name"
+            value="{{ name }}"
+            placeholder="例：中央小学校"
+            autocomplete="off"
+          >
+          <p class="field-example">入力例：中央小学校。「小学校」など一部だけでも検索できます。</p>
+        </div>
+        <div>
+          <label for="shelter-district">地区</label>
+          <select
+            id="shelter-district"
+            name="district"
+          >
+            <option value="">地区を指定しない</option>
+            {% for option in districts %}
+              <option value="{{ option }}" {% if district == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+          <p class="field-example">地区が分からない場合は「地区を指定しない」のままで検索できます。</p>
+        </div>
+      </div>
+      {% if not districts %}
+        <p class="search-note">地区情報が登録されていません。避難所名のキーワードで検索するか、地区を指定せずに検索してください。</p>
+      {% endif %}
+      <div class="search-actions">
+        <button class="search-button" type="submit">この条件で避難所を検索</button>
+        <a class="clear-link" href="{{ url_for('shelter_search') }}">条件をクリア</a>
+      </div>
+    </form>
+    <p class="search-note">選択した災害種別・設備への対応が登録されている施設のみ表示します。情報が未確認の施設は条件検索に含みません。施設の安全性を保証するものではありません。実際の避難時は自治体の避難情報・現地の状況に従ってください。</p>
+  </section>
+
+  <section class="results-panel" aria-labelledby="results-title" aria-live="polite">
+    <div class="results-heading">
+      <h2 id="results-title">{% if searched %}検索結果{% else %}登録施設一覧{% endif %}</h2>
+      <p class="result-count">{{ results|length }}件</p>
+    </div>
+    {% if results %}
+      <ul class="shelter-list">
+        {% for shelter in results %}
+          <li class="shelter-card">
+            <p class="shelter-name">{{ shelter.get('name', '名称未登録') }}</p>
+            {% set area = shelter.get('district') or shelter.get('address') or shelter.get('location') %}
+            {% if area %}
+              <p class="shelter-area">地区・住所：{{ area }}</p>
+            {% endif %}
+            {% if shelter.get('disaster_types') %}
+              <p class="shelter-disasters">対応確認済み：{{ shelter.get('disaster_types')|join('、') }}</p>
+            {% elif shelter.get('disaster_types') is not none %}
+              <p class="shelter-disasters">災害対応情報：登録なし</p>
+            {% else %}
+              <p class="shelter-disasters">災害対応情報：未確認</p>
+            {% endif %}
+            <p class="shelter-disasters">
+              ペット：{% if shelter.get('pets_allowed') is sameas true %}可{% elif shelter.get('pets_allowed') is sameas false %}不可{% else %}未確認{% endif %}
+              ／ バリアフリー：{% if shelter.get('barrier_free') is sameas true %}対応{% elif shelter.get('barrier_free') is sameas false %}非対応{% else %}未確認{% endif %}
+            </p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% elif searched %}
+      <p class="empty-state">条件に一致する避難所は見つかりませんでした。入力内容を変えるか、<a href="{{ url_for('shelter_search') }}">条件をクリア</a>して再検索してください。</p>
+    {% else %}
+      <p class="empty-state">現在、登録されている避難所はありません。</p>
+    {% endif %}
+    {% if unclassified_count %}
+      <p class="search-note">災害対応情報が未登録の施設：{{ unclassified_count }}件。対応状況が確認できるまでは、災害種別を指定した検索結果には表示しません。</p>
+    {% endif %}
+    {% if unclassified_equipment_count %}
+      <p class="search-note">設備情報が未確認の施設：{{ unclassified_equipment_count }}件。選択した設備条件での検索結果には表示しません。</p>
+    {% endif %}
+    <p class="search-links"><a class="secondary-button" href="{{ url_for('index') }}">ホームに戻る</a></p>
+  </section>
+</section>
 {% endblock %}
